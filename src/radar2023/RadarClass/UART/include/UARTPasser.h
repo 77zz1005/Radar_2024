@@ -32,6 +32,9 @@ public:
     float _event_prevent[6] = {0.f};
     int loop_send = 0;
 
+    // TO TEST
+    vector<vector<float>> _test_robot_location = vector<vector<float>>{{0.0f, 0.0f}, {25.0 / 5.0, -18.0 / 5.0}, {25.0 / 5.0 * 2.0, -18.0 / 5.0 * 2.0}, {25.0 / 5.0 * 3.0, -18.0 / 5.0 * 3.0}, {25.0 / 5.0 * 4.0, -18.0 / 5.0 * 4.0}, {25.0, -18.0}};
+
     // add: radar
     // 双倍易伤
     int _Injury_Num = 0;              // 雷达是否有易伤的机会 开局为0,至多为2
@@ -57,6 +60,8 @@ public:
     void Receive_Robot_Data(unsigned char *buffer);
     void Radar_Injury_State(unsigned char *buffer); // 全场双倍易伤状态
     void Mark_Enemy_Process(unsigned char *buffer); // 标记进度
+    // TO TEST
+    vector<vector<float>> test_get_position()
 };
 
 #endif

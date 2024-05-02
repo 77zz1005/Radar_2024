@@ -50,10 +50,9 @@ void UART::Refree_Warning()
     this->Game_refree_warning.count = this->buffer[9]; // add
 }
 
+// void UART::Refree_dart_remaining_time()  //merged
 
-//void UART::Refree_dart_remaining_time()  //merged
-
-//车间通信【与哨兵】-- param in】 子内容id 我方哨兵id 数据段 串口
+// 车间通信【与哨兵】-- param in】 子内容id 我方哨兵id 数据段 串口
 void UART::Referee_Transmit_BetweenCar(unsigned int dataID, unsigned char ReceiverId, unsigned char data[48], MySerial::Ptr ser)
 {
     unsigned char local_buffer[200];
@@ -138,7 +137,7 @@ void UART::Referee_Transmit_BetweenCar(unsigned int dataID, unsigned char Receiv
     ser->mswrite(buffer_tmp_array, 54 + 9);
 }
 
-//裁判系统评估--【param in】 cmd_id=0x0305 协议中的真实enemy_id x y 串口
+// 裁判系统评估--【param in】 cmd_id=0x0305 协议中的真实enemy_id x y 串口
 void UART::Referee_Transmit_Map(unsigned int cmdID, int targetId, float x, float y, MySerial::Ptr ser)
 {
     // float to byte
@@ -189,41 +188,72 @@ void UART::Referee_Transmit_Map(unsigned int cmdID, int targetId, float x, float
     ser->mswrite(buffer_tmp_array, 14 + 9); // 发送给串口
 }
 
-//裁判系统评估--主
+// // Origin
+// //  裁判系统评估--主
+// void UART::Robot_Data_Transmit_Map(MySerial::Ptr ser)
+// {
+//     /**格式转换**/
+//     bool flag;
+//     vector<float> location = myUARTPasser.get_position()[this->ind]; // 返回特定机器人的位置(x y)
+//     if (location[0] == 0 && location[1] == 0)                        // （x y）== (0,0)  false
+//         flag = false;
+//     else
+//         flag = true;
+//     /**将消息通过串口发给裁判系统**/
+//     if (!this->ENEMY && flag) // enemy red
+//     {
+//         //  cmd_id:0x0305 雷达-所有己方选手端发送enemy的坐标数据-显示到己方选手端的小地图上
+//         this->Referee_Transmit_Map(0x0305, this->Id_red, _Float32(location[0]), _Float32(location[1]), ser);
+//     }
+//     else if (flag) // enemy blue
+//     {
+//         this->Referee_Transmit_Map(0x0305, this->Id_blue, _Float32(location[0]), _Float32(location[1]), ser);
+//     }
+
+//     /**更新**/
+//     if (flag)
+//         ++this->myUARTPasser.loop_send; //  更新计数器
+//     if (this->ind == 5)
+//     {
+//         // if (this->myUARTPasser.loop_send == 0)
+//         if (this->myUARTPasser.loop_send != 0)
+//             this->myUARTPasser.loop_send = 0; // 发送完所有敌方坐标 置0
+//     }
+//     this->ControlLoop_red();
+//     this->ControlLoop_blue();
+//     this->ind = (this->ind + 1) % 6;
+// }
+// 裁判系统评估--主
 void UART::Robot_Data_Transmit_Map(MySerial::Ptr ser)
 {
     /**格式转换**/
-    bool flag;
-    vector<float> location = myUARTPasser.get_position()[this->ind];  //返回特定机器人的位置(x y)
-    if (location[0] == 0 && location[1] == 0)  // （x y）== (0,0)  false
-        flag = false;
-    else
-        flag = true;
+    bool flag = true;
+    vector<float> location = myUARTPasser.test_get_position()[this->ind]; // 返回特定机器人的位置(x y)
     /**将消息通过串口发给裁判系统**/
-    if (!this->ENEMY && flag)  // enemy red
+    if (!this->ENEMY && flag) // enemy red
     {
         //  cmd_id:0x0305 雷达-所有己方选手端发送enemy的坐标数据-显示到己方选手端的小地图上
         this->Referee_Transmit_Map(0x0305, this->Id_red, _Float32(location[0]), _Float32(location[1]), ser);
     }
-    else if (flag)  // enemy blue
+    else if (flag) // enemy blue
     {
         this->Referee_Transmit_Map(0x0305, this->Id_blue, _Float32(location[0]), _Float32(location[1]), ser);
     }
 
     /**更新**/
     if (flag)
-        ++this->myUARTPasser.loop_send;   //  更新计数器
+        ++this->myUARTPasser.loop_send; //  记录有效位置的个数
     if (this->ind == 5)
     {
-        if (this->myUARTPasser.loop_send == 0)
-            this->myUARTPasser.loop_send = 0;  // 发送完所有敌方坐标 置0
+        if (this->myUARTPasser.loop_send != 0)
+            this->myUARTPasser.loop_send = 0; // 发送完所有敌方坐标 置0
     }
     this->ControlLoop_red();
     this->ControlLoop_blue();
     this->ind = (this->ind + 1) % 6;
 }
 
-void UART::ControlLoop_red()// 更新官方手册里的真实id
+void UART::ControlLoop_red() // 更新官方手册里的真实id
 {
     if (this->Id_red == 5)
         this->Id_red = 7;
@@ -246,13 +276,13 @@ void UART::ControlLoop_blue()
 // 通过串口接收裁判系统信息 用于解析接收到的串口数据帧，并根据帧中的命令ID和数据长度进行相应的处理
 void UART::read(MySerial::Ptr ser)
 {
-    unsigned char tempBuffer[1];// 读取一个字节的数据到 tempBuffer
-    ser->msread(tempBuffer, 1);//读串口数据1-byte
-    int s = (int)tempBuffer[0];//转为整数
+    unsigned char tempBuffer[1]; // 读取一个字节的数据到 tempBuffer
+    ser->msread(tempBuffer, 1);  // 读串口数据1-byte
+    int s = (int)tempBuffer[0];  // 转为整数
 
     // CHECK:最长的数据段只设置了50-byte 因此 若超过50肯定是错误的
-    if (this->buffercnt > 50)// buffercnt用于记录缓冲区接收到的字节数
-        this->buffercnt = 0;// 缓冲区计数器重置为0
+    if (this->buffercnt > 50) // buffercnt用于记录缓冲区接收到的字节数
+        this->buffercnt = 0;  // 缓冲区计数器重置为0
 
     // 把读到的data赋值给相应位置的缓冲区
     this->buffer[this->buffercnt] = s;
@@ -282,7 +312,7 @@ void UART::read(MySerial::Ptr ser)
 
     /**解析cmd_id 并记录**/
     if (this->buffercnt == 7)
-        this->cmdID = (0x0000 | buffer[5]) | (buffer[6] << 8);// 完整的16位命令ID
+        this->cmdID = (0x0000 | buffer[5]) | (buffer[6] << 8); // 完整的16位命令ID
 
     /**根据cmd_id进行相应处理**/
     // 注：有要处理信息用this->passer.func; 仅读信息用this->func()
@@ -309,7 +339,7 @@ void UART::read(MySerial::Ptr ser)
     {
         if (myHandler.Verify_CRC16_Check_Sum(this->buffer, 20))
         {
-            this->myUARTPasser.Referee_Update_GameData(this->buffer);//显示比赛进程
+            this->myUARTPasser.Referee_Update_GameData(this->buffer); // 显示比赛进程
             this->buffercnt = 0;
             if (this->buffer[this->buffercnt] == 0xa5)
                 this->buffercnt = 1;
@@ -550,7 +580,7 @@ void UART::read(MySerial::Ptr ser)
                 this->buffercnt = 1;
             return;
         }
-    }    
+    }
     ++this->buffercnt;
 }
 
@@ -584,7 +614,9 @@ void UART::write(MySerial::Ptr ser)
         data[data_p + 6] = t_y[2];
         data[data_p + 7] = t_y[3];
     }
-    Referee_Transmit_BetweenCar(dataID, receiverId, data, ser); // 给哨兵发敌方的位置
+    // func2
+    //  给哨兵发敌方的位置
+    Referee_Transmit_BetweenCar(dataID, receiverId, data, ser);
 
     usleep(100000); // 100 000us-100ms--0.1s--10Hz
 }
